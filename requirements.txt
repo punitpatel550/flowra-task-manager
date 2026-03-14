@@ -1,6 +1,8 @@
 Flask
-Flask-Login
 Flask-SQLAlchemy
+Flask-Login
 Flask-Migrate
-pymysql
 gunicorn
+psycopg2-binary
+pymysql
+twilio
