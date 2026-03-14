@@ -1,7 +1,6 @@
 from flask import make_response, request, redirect, url_for, render_template, current_app, session
 from app.utils.whatsapp import send_whatsapp_message
 from py_compile import main
-from turtle import title
 from flask import Blueprint, app, render_template, request, redirect, send_from_directory, url_for, flash
 from flask_login import current_user, login_required, login_user, logout_user
 from sqlalchemy.exc import IntegrityError
