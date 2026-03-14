@@ -9,3 +9,4 @@ twilio
 APScheduler
 pandas
 openpyxl
+xhtml2pdf
