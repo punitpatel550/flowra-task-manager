@@ -1,4 +1,5 @@
 from twilio.rest import Client
+from twilio.base.exceptions import TwilioRestException
 from flask import current_app
 
 
@@ -8,11 +9,12 @@ def send_whatsapp_message(to_number, message):
         auth_token = current_app.config["TWILIO_AUTH_TOKEN"]
         twilio_number = current_app.config["TWILIO_WHATSAPP_NUMBER"]
 
-        client = Client(account_sid, auth_token)
+        print("TWILIO_ACCOUNT_SID:", account_sid)
+        print("TWILIO_AUTH_TOKEN exists:", bool(auth_token))
+        print("TWILIO_WHATSAPP_NUMBER:", twilio_number)
+        print("TO NUMBER:", to_number)
 
-        print("SID:", account_sid)
-        print("TOKEN:", auth_token)
-        print("FROM:", twilio_number)
+        client = Client(account_sid, auth_token)
 
         msg = client.messages.create(
             body=message,
@@ -21,6 +23,11 @@ def send_whatsapp_message(to_number, message):
         )
 
         print("Message Sent SID:", msg.sid)
+        print("Message Status:", msg.status)
 
+    except TwilioRestException as e:
+        print("Twilio error code:", e.code)
+        print("Twilio error message:", e.msg)
+        print("Twilio HTTP status:", e.status)
     except Exception as e:
         print("Error sending WhatsApp message:", e)

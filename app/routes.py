@@ -180,7 +180,7 @@ def stop_reminder_page(id):
 # ---------------- CREATE TASK ----------------
 
 
-@bp.route("/create_task", methods=['GET', 'POST'])
+@bp.route("/create_task", methods=["GET", "POST"])
 @login_required
 def create_task():
 
@@ -196,8 +196,6 @@ def create_task():
         assigned_to_id = request.form.get("assigned_to")
         due_date_str = request.form.get("due_date")
         reward_points = int(request.form.get("reward_points", 5))
-
-        # NEW FEATURE
         estimated_time = request.form.get("estimated_time")
 
         print("Reward points from form:", reward_points)
@@ -216,7 +214,6 @@ def create_task():
 
         assigned_to = int(assigned_to_id) if assigned_to_id else None
 
-        # AI TASK SUGGESTION (simple logic)
         if not description:
             description = "General task created"
 
@@ -231,40 +228,32 @@ def create_task():
             estimated_time=estimated_time
         )
 
-        # ---------------- SINGLE ATTACHMENT (existing)
+        # Single attachment
         attachment = request.files.get("attachment")
-
         if attachment and attachment.filename != "":
             filename = secure_filename(attachment.filename)
-            upload_path = current_app.config['UPLOAD_FOLDER']
+            upload_path = current_app.config["UPLOAD_FOLDER"]
             os.makedirs(upload_path, exist_ok=True)
-
             attachment.save(os.path.join(upload_path, filename))
             task.attachment = filename
 
         db.session.add(task)
         db.session.commit()
 
-        # ---------------- MULTIPLE FILE UPLOAD (NEW)
+        # Multiple attachments
         files = request.files.getlist("attachments")
-
-        upload_path = current_app.config['UPLOAD_FOLDER']
+        upload_path = current_app.config["UPLOAD_FOLDER"]
 
         for file in files:
-
             if file and file.filename != "":
-
                 filename = secure_filename(file.filename)
-
                 file_path = os.path.join(upload_path, filename)
-
                 file.save(file_path)
 
                 new_attachment = TaskAttachment(
                     task_id=task.id,
                     filename=filename
                 )
-
                 db.session.add(new_attachment)
 
         db.session.commit()
@@ -272,15 +261,14 @@ def create_task():
         print("Task saved. Task ID:", task.id)
         print("Task reward points saved:", task.reward_points)
 
-        # ---------------- AUTO REMINDER FEATURE
+        # Auto reminder
         if due_date and assigned_to:
-
             reminder_time = due_date - timedelta(hours=1)
 
             reminder = Reminder(
                 reason=f"Task Deadline: {title}",
                 remind_at=reminder_time,
-                end_at=due_date,         
+                end_at=due_date,
                 user_id=assigned_to,
                 active=True
             )
@@ -288,13 +276,18 @@ def create_task():
             db.session.add(reminder)
             db.session.commit()
 
-        # ---------------- WHATSAPP NOTIFICATION
+        # WhatsApp notification
         if assigned_to:
-
             employee = User.query.get(assigned_to)
 
-            if employee and employee.phone:
+            print("Assigned To ID:", assigned_to)
+            print("Employee object:", employee)
 
+            if employee:
+                print("Employee username:", employee.username)
+                print("Employee phone:", employee.phone)
+
+            if employee and employee.phone:
                 message = f"""
 Hello {employee.username},
 
@@ -306,32 +299,33 @@ You have been assigned a new task.
 
 Please check your dashboard.
 """
+                print("About to send WhatsApp message...")
+                print("Message body:", message)
 
                 try:
                     send_whatsapp_message(employee.phone, message)
-
+                    print("send_whatsapp_message function called successfully")
                 except Exception as e:
                     print("WhatsApp Error:", e)
+            else:
+                print("Employee phone missing or employee not found")
+        else:
+            print("No assigned_to value received")
 
         flash("Task created successfully!", "success")
 
         if current_user.role == "manager":
             return redirect(url_for("main.manager_panel"))
-
         else:
             return redirect(url_for("main.admin_panel"))
 
-    # ---------------- MANAGER EMPLOYEE FILTER
-
+    # Manager employee filter
     if current_user.role == "manager":
-
         employees = User.query.filter_by(
             role="employee",
             supervisor_id=current_user.id
         ).all()
-
     else:
-
         employees = User.query.filter_by(role="employee").all()
 
     return render_template(
