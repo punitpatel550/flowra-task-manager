@@ -20,7 +20,7 @@ class RecurringTask(db.Model):
     frequency = db.Column(db.String(20))  # future use
     last_generated = db.Column(db.Date)
 
-    created_at = db.Column(db.DateTime, default=datetime.now)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class User(UserMixin, db.Model):
@@ -36,7 +36,7 @@ class User(UserMixin, db.Model):
     points = db.Column(db.Integer, default=0)
     role = db.Column(db.String(20), default="employee")
     supervisor_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.now)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
 
     # Tasks the user **created**
@@ -81,13 +81,13 @@ class Task(db.Model):
     reward_points = db.Column(db.Integer, default=0)
     completed_at = db.Column(db.DateTime, nullable=True)
     remarks = db.Column(db.Text)
-    due_date = db.Column(db.Date)
+    due_date = db.Column(db.DateTime)   # changed
     is_deleted = db.Column(db.Boolean, default=False)
     attachment = db.Column(db.String(255))
     proof_file = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    reminder_active = db.Column(db.Boolean, default=False)  # Add this
-    reminder_interval = db.Column(db.Integer)  # in minutes
+    reminder_active = db.Column(db.Boolean, default=False)
+    reminder_interval = db.Column(db.Integer)
     reminder_end_time = db.Column(db.DateTime, nullable=True)
     estimated_time = db.Column(db.Integer, nullable=True)
 
@@ -128,7 +128,7 @@ class TaskAttachment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     task_id = db.Column(db.Integer, db.ForeignKey("task.id"), nullable=False)
     filename = db.Column(db.String(255), nullable=False)
-    uploaded_at = db.Column(db.DateTime, default=datetime.now)
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class SubTask(db.Model):
@@ -139,8 +139,8 @@ class SubTask(db.Model):
     title = db.Column(db.String(200), nullable=False)
     status = db.Column(db.String(50), default="Pending")
     created_by = db.Column(db.Integer, db.ForeignKey("user.id"))
-    created_at = db.Column(db.DateTime, default=datetime.now)
-   
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
 class Reminder(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     reason = db.Column(db.String(200), nullable=False)
@@ -158,5 +158,5 @@ class Department(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.now)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

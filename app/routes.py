@@ -383,6 +383,8 @@ def create_subtask(task_id):
     flash("Sub Task Added", "success")
 
     return redirect(request.referrer)
+
+
 @bp.route("/task/toggle/<int:task_id>")
 @login_required
 def toggle_task(task_id):
@@ -458,10 +460,15 @@ def create_recurring_task():
         flash("Unauthorized", "danger")
         return redirect(url_for("main.dashboard"))
 
-    employees = User.query.filter_by(role="employee").all()
+    if current_user.role == "manager":
+        employees = User.query.filter_by(
+            role="employee",
+            supervisor_id=current_user.id
+        ).all()
+    else:
+        employees = User.query.filter_by(role="employee").all()
 
     if request.method == "POST":
-
         title = request.form.get("title")
         assigned_to = request.form.get("assigned_to")
         start_date = datetime.strptime(request.form.get("start_date"), "%Y-%m-%d").date()
@@ -470,10 +477,11 @@ def create_recurring_task():
 
         recurring = RecurringTask(
             title=title,
-            assigned_to=assigned_to,
+            assigned_to=int(assigned_to),
             start_date=start_date,
             end_date=end_date,
-            frequency=frequency
+            frequency=frequency,
+            last_generated=None
         )
 
         db.session.add(recurring)
