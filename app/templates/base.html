@@ -256,40 +256,64 @@ margin-top:6px;
 let alarm = new Audio("/static/sounds/alarm.mp3")
 alarm.loop = true
 
-function playAlarm(id){
-alarm.play()
+let activeReminders = new Set()
 
-let box = document.createElement("div")
+function playAlarm(id, reason){
 
-box.innerHTML = `
-<div style="position:fixed;top:20px;right:20px;background:white;color:black;padding:15px;border-radius:12px;z-index:9999;box-shadow:0 10px 30px rgba(0,0,0,0.2)">
-🔔 Reminder
-<button onclick="stopReminder(${id})" style="margin-left:10px;background:#ff4d6d;color:white;border:none;padding:6px 12px;border-radius:8px">
-Stop
-</button>
-</div>
-`
+    alarm.play().catch(e => console.log("Autoplay blocked:", e))
 
-document.body.appendChild(box)
+    let box = document.createElement("div")
+
+    box.innerHTML = `
+    <div style="
+        position:fixed;
+        top:20px;
+        right:20px;
+        background:#111827;
+        color:white;
+        padding:15px 20px;
+        border-radius:12px;
+        z-index:9999;
+        box-shadow:0 10px 30px rgba(0,0,0,0.3);
+    ">
+        🔔 ${reason || "Reminder"}
+        <button onclick="stopReminder(${id})"
+        style="
+            margin-left:10px;
+            background:#ff4d6d;
+            color:white;
+            border:none;
+            padding:6px 12px;
+            border-radius:8px;
+        ">
+        Stop
+        </button>
+    </div>
+    `
+
+    document.body.appendChild(box)
 }
 
 function stopReminder(id){
-alarm.pause()
-alarm.currentTime = 0
+    alarm.pause()
+    alarm.currentTime = 0
 
-fetch("/stop_reminder/"+id,{
-method:"POST"
-})
+    fetch("/stop_reminder/"+id,{
+        method:"POST"
+    })
 }
 
 setInterval(()=>{
-fetch("/get_reminders")
-.then(res=>res.json())
-.then(data=>{
-data.forEach(r=>{
-playAlarm(r.id)
-})
-})
+    fetch("/get_reminders")
+    .then(res=>res.json())
+    .then(data=>{
+        data.forEach(r=>{
+            if(!activeReminders.has(r.id)){
+                activeReminders.add(r.id)
+                playAlarm(r.id, r.reason)
+            }
+        })
+    })
 },10000)
 </script>
 

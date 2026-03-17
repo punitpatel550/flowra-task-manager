@@ -35,7 +35,7 @@ def create_app():
     app.config.from_object(Config)
 
     # ✅ Session timeout
-    app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=1)
+    app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=15)
 
     upload_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
     app.config["UPLOAD_FOLDER"] = upload_folder
@@ -74,6 +74,7 @@ def create_app():
         allowed_endpoints = {
             "main.home",
             "main.login",
+            "main.get_reminders",
             "static"
         }
 
@@ -113,16 +114,16 @@ def create_app():
             for task in tasks:
                 print(f"🔔 Reminder: {task.title}")
 
-    if not scheduler.get_job("check_reminders"):
-        scheduler.add_job(
-            func=check_reminders,
-            trigger="interval",
-            minutes=1,
-            id="check_reminders",
-            replace_existing=True
-        )
+ #   if not scheduler.get_job("check_reminders"):
+  #      scheduler.add_job(
+   #         func=check_reminders,
+    #        trigger="interval",
+     #       minutes=1,
+      #      id="check_reminders",
+       #     replace_existing=True
+        #)
 
-    start_scheduler(app)
+    #start_scheduler(app)
 
     with app.app_context():
         db.create_all()

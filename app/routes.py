@@ -266,7 +266,7 @@ def create_task():
             reminder_time = due_date - timedelta(hours=1)
 
             reminder = Reminder(
-                reason=f"Task Deadline: {title}",
+                reason=f"New Task Assigned: {title}",
                 remind_at=reminder_time,
                 end_at=due_date,
                 user_id=assigned_to,
