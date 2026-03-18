@@ -1128,7 +1128,6 @@ def analytics():
         flash("Unauthorized", "danger")
         return redirect(url_for("main.dashboard"))
 
-    # Role-based employees
     if current_user.role == "admin":
         employees = User.query.filter_by(role="employee").all()
     else:
@@ -1144,18 +1143,16 @@ def analytics():
     else:
         tasks = []
 
-    # Summary
     total = len(tasks)
     approved = len([t for t in tasks if t.status == "Approved"])
-    pending = len([t for t in tasks if t.status not in ["Approved"]])
+    pending = len([t for t in tasks if t.status != "Approved"])
 
     overdue_tasks = [
-    t for t in tasks
-    if t.due_date and t.status != "Approved" and t.due_date() < date.today()
-]
+        t for t in tasks
+        if t.due_date and t.status != "Approved" and t.due_date < date.today()
+    ]
     overdue = len(overdue_tasks)
 
-    # 1) Task completed per employee
     employee_names = []
     employee_completed = []
     employee_points = []
@@ -1179,12 +1176,10 @@ def analytics():
             "points": emp.points or 0
         })
 
-    # 2) Project progress
     project_completed = approved
     project_remaining = total - approved if total >= approved else 0
     progress_percent = round((approved / total) * 100, 2) if total > 0 else 0
 
-    # 3) Overdue task table data
     overdue_task_data = []
     for task in overdue_tasks:
         overdue_task_data.append({
@@ -1194,7 +1189,6 @@ def analytics():
             "status": task.status
         })
 
-    # 4) Productivity trends (monthly completed tasks)
     month_labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
     productivity_trend = [0] * 12
@@ -1203,7 +1197,6 @@ def analytics():
         if task.status == "Approved" and task.completed_at:
             productivity_trend[task.completed_at.month - 1] += 1
 
-    # Top performer
     top_performer = None
     if employees:
         top_emp = max(employees, key=lambda e: e.points or 0)

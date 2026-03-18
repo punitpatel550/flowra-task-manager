@@ -225,14 +225,13 @@ margin-top:6px;
 </a>
 
 <div>
-{% if current_user.is_authenticated %}
-
-
-
-    {% if current_user.role in ['admin','manager'] %}
+{% if current_user.is_authenticated 
+      and current_user.role in ['admin', 'manager']
+      and request.endpoint != 'main.login'
+      and request.endpoint != 'main.home' %}  
     <button class="btn btn-warning btn-sm ms-2"
             data-bs-toggle="modal"
-            data-bs-target="#announcementModal">
+            data-bs-target="#announcementCreateModal">
         📢 Announcement
     </button>
     {% endif %}
@@ -249,6 +248,10 @@ margin-top:6px;
 </nav>
 
 
+{% if current_user.is_authenticated 
+      and current_user.role in ['admin', 'manager']
+      and request.endpoint != 'main.login'
+      and request.endpoint != 'main.home' %}
 
 <!-- Create Announcement Modal -->
 <div class="modal fade" id="announcementCreateModal" tabindex="-1" aria-hidden="true">
@@ -269,6 +272,7 @@ margin-top:6px;
     </div>
   </div>
 </div>
+{% endif %}
 
 <!-- Display Board Modal -->
 <div class="modal fade" id="announcementBoardModal" tabindex="-1" aria-hidden="true">
