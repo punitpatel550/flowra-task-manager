@@ -227,9 +227,7 @@ margin-top:6px;
 <div>
 {% if current_user.is_authenticated %}
 
-<a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-light btn-sm">
-<i class="fa fa-chart-line"></i> Dashboard
-</a>
+
 
     {% if current_user.role in ['admin','manager'] %}
     <button class="btn btn-warning btn-sm ms-2"
@@ -239,9 +237,7 @@ margin-top:6px;
     </button>
     {% endif %}
 
-<a href="{{ url_for('main.logout') }}" class="btn btn-danger btn-sm">
-<i class="fa fa-sign-out-alt"></i> Logout
-</a>
+
 
 {% endif %}
 
