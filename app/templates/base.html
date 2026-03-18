@@ -244,6 +244,55 @@ margin-top:6px;
 </div>
 </nav>
 
+
+{% if current_user.is_authenticated %}
+<div style="position:fixed;bottom:20px;left:20px;z-index:999;">
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#announcementCreateModal">
+        📢 Announcement
+    </button>
+</div>
+{% endif %}
+
+<!-- Create Announcement Modal -->
+<div class="modal fade" id="announcementCreateModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('main.create_announcement') }}">
+        <div class="modal-header">
+          <h5 class="modal-title">Post Announcement</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <textarea name="message" class="form-control" rows="5" placeholder="Write announcement for everyone..." required></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Post</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Display Board Modal -->
+<div class="modal fade" id="announcementBoardModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">📢 Display Board</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p id="announcementMessage" style="white-space:pre-line;"></p>
+        <hr>
+        <small class="text-muted">
+          Posted by <span id="announcementCreator"></span> •
+          <span id="announcementTime"></span>
+        </small>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- MAIN CONTENT -->
 
 <div class="container-fluid p-0 main-wrapper">
@@ -315,11 +364,41 @@ setInterval(()=>{
         })
     })
 },10000)
+
+
+document.addEventListener("DOMContentLoaded", function () {
+    fetch("/get-latest-announcement")
+        .then(res => res.json())
+        .then(data => {
+            if (!data.show) return;
+
+            const lastSeenAnnouncementId = localStorage.getItem("lastSeenAnnouncementId");
+
+            if (lastSeenAnnouncementId == data.id) return;
+
+            document.getElementById("announcementMessage").innerText = data.message;
+            document.getElementById("announcementCreator").innerText = data.created_by;
+            document.getElementById("announcementTime").innerText = data.created_at;
+
+            const modalEl = document.getElementById("announcementBoardModal");
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+
+            modalEl.addEventListener("hidden.bs.modal", function () {
+                localStorage.setItem("lastSeenAnnouncementId", data.id);
+            }, { once: true });
+        })
+        .catch(err => console.log("Announcement fetch error:", err));
+});
 </script>
 
 <footer class="app-footer text-center py-3">
 <p>© 2026 Flowra • Developed by Jodidar India</p>
 </footer>
+
+
+
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

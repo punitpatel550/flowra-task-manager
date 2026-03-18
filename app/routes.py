@@ -6,7 +6,7 @@ from flask_login import current_user, login_required, login_user, logout_user
 from sqlalchemy.exc import IntegrityError
 from app import db
 from zoneinfo import ZoneInfo
-from app.models import User, Task, Reminder, Department
+from app.models import User, Task, Reminder, Department, TaskAttachment, SubTask, Announcement, RecurringTask
 from datetime import datetime, date, timedelta
 from werkzeug.utils import secure_filename
 from flask import current_app, jsonify
@@ -710,6 +710,48 @@ def create_reminder():
     else:
         return redirect(url_for("main.employee_panel"))
 
+
+
+
+
+#------------------Announcement------------------
+@bp.route("/create-announcement", methods=["POST"])
+@login_required
+def create_announcement():
+    message = request.form.get("message")
+
+    if not message or not message.strip():
+        flash("Announcement message is required", "danger")
+        return redirect(request.referrer or url_for("main.dashboard"))
+
+    announcement = Announcement(
+        message=message.strip(),
+        created_by=current_user.id,
+        active=True
+    )
+
+    db.session.add(announcement)
+    db.session.commit()
+
+    flash("Announcement posted successfully!", "success")
+    return redirect(request.referrer or url_for("main.dashboard"))  
+
+#-------------Latest announcements for dashboard----------------
+@bp.route("/get-latest-announcement")
+@login_required
+def get_latest_announcement():
+    announcement = Announcement.query.filter_by(active=True).order_by(Announcement.created_at.desc()).first()
+
+    if not announcement:
+        return jsonify({"show": False})
+
+    return jsonify({
+        "show": True,
+        "id": announcement.id,
+        "message": announcement.message,
+        "created_by": announcement.creator.username if announcement.creator else "Unknown",
+        "created_at": announcement.created_at.strftime("%d %b %Y %I:%M %p")
+    })
 
 # GET ACTIVE REMINDERS
 @bp.route("/get_reminders")
