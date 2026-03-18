@@ -1151,7 +1151,7 @@ def analytics():
 
     overdue_tasks = [
     t for t in tasks
-    if t.due_date and t.status != "Approved" and t.due_date.date() < date.today()
+    if t.due_date and t.status != "Approved" and t.due_date() < date.today()
 ]
     overdue = len(overdue_tasks)
 
