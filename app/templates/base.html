@@ -231,6 +231,14 @@ margin-top:6px;
 <i class="fa fa-chart-line"></i> Dashboard
 </a>
 
+    {% if current_user.role in ['admin','manager'] %}
+    <button class="btn btn-warning btn-sm ms-2"
+            data-bs-toggle="modal"
+            data-bs-target="#announcementModal">
+        📢 Announcement
+    </button>
+    {% endif %}
+
 <a href="{{ url_for('main.logout') }}" class="btn btn-danger btn-sm">
 <i class="fa fa-sign-out-alt"></i> Logout
 </a>
@@ -245,13 +253,6 @@ margin-top:6px;
 </nav>
 
 
-{% if current_user.is_authenticated %}
-<div style="position:fixed;bottom:20px;left:20px;z-index:999;">
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#announcementCreateModal">
-        📢 Announcement
-    </button>
-</div>
-{% endif %}
 
 <!-- Create Announcement Modal -->
 <div class="modal fade" id="announcementCreateModal" tabindex="-1" aria-hidden="true">
