@@ -9,7 +9,9 @@
 
 .department-page{
 position:relative;
-min-height:100vh;
+display:flex;
+flex-direction:column;
+height:100vh;
 background:linear-gradient(270deg,#eef2ff,#f5f3ff,#e0f2fe,#ede9fe);
 background-size:600% 600%;
 animation:gradientMove 18s ease infinite;
@@ -68,8 +70,9 @@ pointer-events:none;
 /* BANNER */
 
 .dashboard-banner{
-position:relative;
-z-index:1;
+position:sticky;
+top:0;
+z-index:1000;
 background:linear-gradient(135deg,#2563eb,#7c3aed);
 color:white;
 border-radius:18px;
@@ -186,6 +189,14 @@ white-space:nowrap;
 padding:25px;
 text-align:center;
 color:#64748b;
+}
+
+/* SCROLL AREA */
+
+.department-scroll{
+flex:1;
+overflow-y:auto;
+min-height:0;
 }
 
 /* GRID */
@@ -314,6 +325,8 @@ min-width:640px;
 
 </div>
 
+<div class="department-scroll">
+
 <div class="department-grid">
 
 {% for item in department_data %}
@@ -434,6 +447,8 @@ No employees in this department.
 </div>
 
 {% endfor %}
+
+</div>
 
 </div>
 
