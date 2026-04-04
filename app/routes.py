@@ -572,20 +572,38 @@ def ai_suggestion(task_id):
 
 #----------------------------------------
 
-@bp.route("/delete_user/<int:id>", methods=["POST"])
+@bp.route("/delete_user/<int:user_id>", methods=["POST"])
 @login_required
-def delete_user(id):
-
+def delete_user(user_id):
     if current_user.role != "admin":
-        flash("Unauthorized", "danger")
-        return redirect(url_for("main.dashboard"))
+        abort(403)
 
-    user = User.query.get_or_404(id)
+    user = User.query.get_or_404(user_id)
 
-    db.session.delete(user)
-    db.session.commit()
+    if user.id == current_user.id:
+        flash("You cannot delete your own account.", "danger")
+        return redirect(url_for("main.manage_users"))
 
-    flash("User Deleted", "danger")
+    try:
+        # 1. Pehle user ke related child records delete karo
+        SubTask.query.filter_by(created_by=user.id).delete()
+        Reminder.query.filter_by(user_id=user.id).delete()
+        RecurringTask.query.filter_by(assigned_to=user.id).delete()
+
+        # 2. User se linked tasks delete karo
+        Task.query.filter(
+            (Task.created_by == user.id) | (Task.assigned_to == user.id)
+        ).delete(synchronize_session=False)
+
+        # 3. Ab user delete karo
+        db.session.delete(user)
+        db.session.commit()
+
+        flash("User and related records deleted successfully.", "success")
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Unable to delete user: {str(e)}", "danger")
 
     return redirect(url_for("main.manage_users"))
 
