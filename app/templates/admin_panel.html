@@ -574,5 +574,10 @@ alert(data.message || "Could not delete task");
 });
 
 </script>
+<script>
+    setTimeout(function () {
+        window.location.reload();
+    }, 10000); // 10000 ms = 10 seconds
+</script>
 
 {% endblock %}
