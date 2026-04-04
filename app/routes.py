@@ -1024,7 +1024,7 @@ def create_department():
     return render_template("create_department.html", departments=departments)
 
 
-@main.route("/delete-department/<int:id>", methods=["POST"])
+@bp.route("/delete-department/<int:id>", methods=["POST"])
 @login_required
 def delete_department(id):
     if current_user.role != "admin":
