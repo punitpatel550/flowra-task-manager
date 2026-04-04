@@ -8,11 +8,10 @@
 /* PAGE BACKGROUND */
 
 .admin-page{
-position:relative;
-min-height:100vh;
+display:flex;
+flex-direction:column;
+height:100vh;
 background:linear-gradient(270deg,#eef2ff,#f5f3ff,#e0f2fe,#ede9fe);
-background-size:600% 600%;
-animation:gradientMove 18s ease infinite;
 overflow:hidden;
 }
 
@@ -26,6 +25,8 @@ overflow:hidden;
 
 .content{
 padding:40px;
+overflow-y:auto;
+flex:1;
 }
 
 /* NAVBAR */
@@ -41,6 +42,9 @@ box-shadow:0 6px 20px rgba(0,0,0,0.08);
 margin-bottom:25px;
 flex-wrap:wrap;
 gap:12px;
+position:sticky;
+top:0;
+z-index:1000;
 }
 
 .panel-title{
