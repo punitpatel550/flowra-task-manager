@@ -1,6 +1,7 @@
 from flask import make_response, request, redirect, url_for, render_template, current_app, session
 from app.utils.whatsapp import send_whatsapp_message
 from py_compile import main
+from flask import abort
 from flask import Blueprint, app, render_template, request, redirect, send_from_directory, url_for, flash
 from flask_login import current_user, login_required, login_user, logout_user
 from sqlalchemy.exc import IntegrityError
@@ -1023,21 +1024,22 @@ def create_department():
     return render_template("create_department.html", departments=departments)
 
 
-@bp.route("/delete-department/<int:id>")
+@main.route("/delete-department/<int:id>", methods=["POST"])
 @login_required
 def delete_department(id):
-
     if current_user.role != "admin":
-        flash("Unauthorized", "danger")
-        return redirect(url_for("main.dashboard"))
+        abort(403)
 
-    dept = Department.query.get_or_404(id)
+    department = Department.query.get_or_404(id)
 
-    db.session.delete(dept)
+    linked_users = User.query.filter_by(department_id=id).count()
+    if linked_users > 0:
+        flash("Department cannot be deleted because users are assigned to it.", "danger")
+        return redirect(url_for("main.create_department"))
+
+    db.session.delete(department)
     db.session.commit()
-
-    flash("Department deleted!", "warning")
-
+    flash("Department deleted successfully.", "success")
     return redirect(url_for("main.create_department"))
 
 
