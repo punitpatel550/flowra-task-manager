@@ -59,7 +59,7 @@
                     data-created="{{ task.created_at_ist.strftime('%d %b %Y %I:%M %p') if task.created_at_ist else '-' }}"
                     data-completed="{{ task.completed_at_ist.strftime('%d %b %Y %I:%M %p') if task.completed_at_ist else '-' }}"
                     data-deleted="{{ 'Yes' if task.is_deleted else 'No' }}">
-                    {{ task.id }}
+                    {{ loop.index }}
                 </button>
             </td>
 
