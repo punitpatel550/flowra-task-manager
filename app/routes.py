@@ -79,22 +79,29 @@ def login():
                     status="Pending"
                 ).first()
 
-                # If a pending request exists and is older than 2 minutes,
-                # treat old login/session as stale and clear it
-                if existing_pending:
-                    if datetime.utcnow() - existing_pending.created_at > timedelta(minutes=2):
-                        existing_pending.status = "Denied"
-                        user.is_logged_in = False
-                        user.active_session_token = None
-                        db.session.commit()
-                    else:
-                        return jsonify({
-                            "status": "waiting",
-                            "token": existing_pending.token,
-                            "message": "This account is already active on another device. Waiting for allow or deny."
-                        })
+                # stale pending request older than 2 minutes -> clear old state
+                if existing_pending and datetime.utcnow() - existing_pending.created_at > timedelta(minutes=2):
+                    existing_pending.status = "Denied"
+                    user.is_logged_in = False
+                    user.active_session_token = None
+                    db.session.commit()
+                    existing_pending = None
 
-                # Re-check after stale cleanup
+                # if there is a valid pending request, keep waiting
+                if user.is_logged_in and existing_pending:
+                    return jsonify({
+                        "status": "waiting",
+                        "token": existing_pending.token,
+                        "message": "This account is already active on another device. Waiting for allow or deny."
+                    })
+
+                # if user is marked logged in but no pending request exists, treat it as stale and clear it
+                if user.is_logged_in and not existing_pending:
+                    user.is_logged_in = False
+                    user.active_session_token = None
+                    db.session.commit()
+
+                # create fresh request only if still needed
                 if user.is_logged_in:
                     new_request = LoginRequest(
                         user_id=user.id,
@@ -218,7 +225,21 @@ def deny_login(req_id):
     db.session.commit()
     return jsonify({"success": True})
 
+@bp.route("/pending-logins")
+@login_required
+def pending_logins():
+    requests = LoginRequest.query.filter_by(
+        user_id=current_user.id,
+        status="Pending"
+    ).order_by(LoginRequest.created_at.desc()).all()
 
+    return jsonify([
+        {
+            "id": r.id,
+            "device": r.device_info or "Unknown device"
+        }
+        for r in requests
+    ])
 
 
 # ---------------- DASHBOARD ----------------

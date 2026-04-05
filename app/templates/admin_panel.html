@@ -574,50 +574,57 @@ required>
     </div>
 </div>
 
+
 <script>
 let currentRequestId = null;
 let modalInstance = null;
 
-document.addEventListener("DOMContentLoaded", function(){
-
+document.addEventListener("DOMContentLoaded", function () {
     const modalEl = document.getElementById("loginApprovalModal");
     modalInstance = new bootstrap.Modal(modalEl);
 
     setInterval(function () {
         fetch("/pending-logins")
-        .then(res => res.json())
-        .then(data => {
-
-            if (data.length > 0) {
-
-                const req = data[0];
-
-                currentRequestId = req.id;
-
-                document.getElementById("loginRequestText").innerText =
-                    "New login request from " + req.device;
-
-                modalInstance.show();
-            }
-        });
+            .then(res => res.json())
+            .then(data => {
+                if (data.length > 0) {
+                    const req = data[0];
+                    currentRequestId = req.id;
+                    document.getElementById("loginRequestText").innerText =
+                        "New login request from " + req.device;
+                    modalInstance.show();
+                }
+            });
     }, 3000);
 
-    document.getElementById("approveBtn").onclick = function(){
-        if(currentRequestId){
-            fetch("/approve-login/" + currentRequestId, {method:"POST"})
-            .then(()=> modalInstance.hide());
+    document.getElementById("approveBtn").onclick = function () {
+        if (currentRequestId) {
+            fetch("/approve-login/" + currentRequestId, { method: "POST" })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        modalInstance.hide();
+                        currentRequestId = null;
+                    }
+                });
         }
     };
 
-    document.getElementById("denyBtn").onclick = function(){
-        if(currentRequestId){
-            fetch("/deny-login/" + currentRequestId, {method:"POST"})
-            .then(()=> modalInstance.hide());
+    document.getElementById("denyBtn").onclick = function () {
+        if (currentRequestId) {
+            fetch("/deny-login/" + currentRequestId, { method: "POST" })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        modalInstance.hide();
+                        currentRequestId = null;
+                    }
+                });
         }
     };
-
 });
 </script>
+
 
 
 <script>
@@ -654,7 +661,7 @@ alert(data.message || "Could not delete task");
 <script>
     setTimeout(function () {
         window.location.reload();
-    }, 25000); // 25000 ms = 25 seconds
+    }, 100000); // 100000 ms = 100 seconds
 </script>
 
 {% endblock %}
