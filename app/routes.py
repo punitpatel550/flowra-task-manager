@@ -71,23 +71,20 @@ def login():
                     status="Pending"
                 ).first()
 
-                if existing_pending:
-                    flash("A login approval request is already pending.", "warning")
-                    return redirect(url_for("main.waiting_approval", token=existing_pending.token))
+                if not existing_pending:
+                    new_request = LoginRequest(
+                        user_id=user.id,
+                        device_info=request.headers.get("User-Agent"),
+                        ip_address=request.remote_addr,
+                        token=str(uuid.uuid4()),
+                        status="Pending"
+                    )
 
-                new_request = LoginRequest(
-                    user_id=user.id,
-                    device_info=request.headers.get("User-Agent"),
-                    ip_address=request.remote_addr,
-                    token=str(uuid.uuid4()),
-                    status="Pending"
-                )
+                    db.session.add(new_request)
+                    db.session.commit()
 
-                db.session.add(new_request)
-                db.session.commit()
-
-                flash("Login request sent for approval.", "info")
-                return redirect(url_for("main.waiting_approval", token=new_request.token))
+                flash("This account is already active on another device. Approval or denial will be handled by the authorized user.", "warning")
+                return redirect(url_for("main.login"))
 
             # ✅ Normal login if not logged in anywhere else
             session_token = str(uuid.uuid4())
@@ -1565,34 +1562,20 @@ def stop_task(id):
 
     return redirect(url_for("main.employee_panel"))
 
-# ---------------- LOGOUT ----------------
-@bp.route("/logout")
-@login_required
-def logout():
-    logout_user()
-    session.clear()
-    flash("Logged out successfully.", "success")
-    return redirect(url_for("main.home"))
-
-@bp.route("/waiting/<token>")
-def waiting_approval(token):
-    return render_template("waiting_approval.html", token=token)
 
 @bp.route("/approve-login/<int:req_id>", methods=["POST"])
 @login_required
 def approve_login(req_id):
 
     req = LoginRequest.query.get_or_404(req_id)
-
     user = User.query.get(req.user_id)
 
-    # generate new session
-    new_token = str(uuid.uuid4())
-
-    user.active_session_token = new_token
-    db.session.commit()
+    # 🔥 Reset login so second device can login
+    user.is_logged_in = False
+    user.active_session_token = None
 
     req.status = "Approved"
+
     db.session.commit()
 
     return {"success": True}
@@ -1603,8 +1586,8 @@ def approve_login(req_id):
 def deny_login(req_id):
 
     req = LoginRequest.query.get_or_404(req_id)
-
     req.status = "Denied"
+
     db.session.commit()
 
     return {"success": True}
@@ -1630,3 +1613,15 @@ def check_session():
             logout_user()
             session.clear()
             return redirect(url_for("main.login"))
+
+# ---------------- LOGOUT ----------------
+@bp.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    session.clear()
+    flash("Logged out successfully.", "success")
+    return redirect(url_for("main.home"))
+
+
+
