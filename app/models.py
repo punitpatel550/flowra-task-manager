@@ -128,7 +128,7 @@ class Task(db.Model):
         back_populates="tasks_assigned"
     )
 
-    work_status = db.Column(db.String(20), default="Stopped")
+    work_status = db.Column(db.String(20), default="not_started")  # not_started / in_progress / paused / completed
     start_time = db.Column(db.DateTime, nullable=True)
     end_time = db.Column(db.DateTime, nullable=True)
     total_time_spent = db.Column(db.Integer, default=0)

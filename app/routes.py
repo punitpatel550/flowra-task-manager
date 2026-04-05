@@ -550,7 +550,24 @@ def toggle_task(task_id):
     db.session.commit()
     return redirect(url_for("main.create_task"))
 
+@bp.route("/task/work-toggle/<int:task_id>")
+@login_required
+def toggle_work(task_id):
 
+    task = Task.query.get_or_404(task_id)
+
+    if task.work_status == "Not Started":
+        task.work_status = "Started"
+
+    elif task.work_status == "Started":
+        task.work_status = "Stopped"
+
+    elif task.work_status == "Stopped":
+        task.work_status = "Started"
+
+    db.session.commit()
+
+    return redirect(request.referrer)
 
 
 
