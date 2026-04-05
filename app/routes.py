@@ -64,14 +64,30 @@ def login():
 
         if user and user.check_password(password):
 
-            # ✅ If already logged in on another device, create approval request
+            # If already logged in on another device
             if user.is_logged_in:
                 existing_pending = LoginRequest.query.filter_by(
                     user_id=user.id,
                     status="Pending"
                 ).first()
 
-                if not existing_pending:
+                # If a pending request exists and is older than 2 minutes,
+                # treat old login/session as stale and clear it
+                if existing_pending:
+                    if datetime.utcnow() - existing_pending.created_at > timedelta(minutes=2):
+                        existing_pending.status = "Denied"
+                        user.is_logged_in = False
+                        user.active_session_token = None
+                        db.session.commit()
+                    else:
+                        flash(
+                            "This account is already active on another device. Please approve or deny the request from the authorized device.",
+                            "warning"
+                        )
+                        return redirect(url_for("main.login"))
+
+                # Re-check after stale cleanup
+                if user.is_logged_in:
                     new_request = LoginRequest(
                         user_id=user.id,
                         device_info=request.headers.get("User-Agent"),
@@ -83,10 +99,13 @@ def login():
                     db.session.add(new_request)
                     db.session.commit()
 
-                flash("This account is already active on another device. Approval or denial will be handled by the authorized user.", "warning")
-                return redirect(url_for("main.login"))
+                    flash(
+                        "This account is already active on another device. Approval or denial will be handled by the authorized user.",
+                        "warning"
+                    )
+                    return redirect(url_for("main.login"))
 
-            # ✅ Normal login if not logged in anywhere else
+            # Normal login
             session_token = str(uuid.uuid4())
 
             user.is_logged_in = True
@@ -95,7 +114,6 @@ def login():
 
             login_user(user)
 
-            # ✅ session activity start
             session["last_activity"] = datetime.utcnow().isoformat()
             session["session_token"] = session_token
 
@@ -1618,6 +1636,10 @@ def check_session():
 @bp.route("/logout")
 @login_required
 def logout():
+    current_user.is_logged_in = False
+    current_user.active_session_token = None
+    db.session.commit()
+
     logout_user()
     session.clear()
     flash("Logged out successfully.", "success")
