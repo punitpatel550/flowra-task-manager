@@ -552,6 +552,38 @@ required>
     </div>
 </div>
 
+<div id="login-requests"></div>
+
+<script>
+setInterval(function () {
+    fetch("/pending-logins")
+    .then(res => res.json())
+    .then(data => {
+        let html = "";
+
+        data.forEach(req => {
+            html += `
+                <div>
+                    New login request from ${req.device}
+                    <button onclick="approve(${req.id})">Approve</button>
+                    <button onclick="deny(${req.id})">Deny</button>
+                </div>
+            `;
+        });
+
+        document.getElementById("login-requests").innerHTML = html;
+    });
+}, 3000);
+
+function approve(id){
+    fetch("/approve-login/"+id, {method:"POST"});
+}
+
+function deny(id){
+    fetch("/deny-login/"+id, {method:"POST"});
+}
+</script>
+
 
 <script>
 
@@ -587,7 +619,7 @@ alert(data.message || "Could not delete task");
 <script>
     setTimeout(function () {
         window.location.reload();
-    }, 10000); // 10000 ms = 10 seconds
+    }, 25000); // 25000 ms = 25 seconds
 </script>
 
 {% endblock %}

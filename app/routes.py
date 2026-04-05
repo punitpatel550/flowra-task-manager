@@ -13,7 +13,8 @@ from werkzeug.utils import secure_filename
 from flask import current_app, jsonify
 import os
 import re
-from app.models import RecurringTask
+from app.models import RecurringTask,User,LoginRequest
+import uuid
 from io import BytesIO
 import pandas as pd
 from flask import send_file
@@ -63,10 +64,43 @@ def login():
 
         if user and user.check_password(password):
 
+            # ✅ If already logged in on another device, create approval request
+            if user.is_logged_in:
+                existing_pending = LoginRequest.query.filter_by(
+                    user_id=user.id,
+                    status="Pending"
+                ).first()
+
+                if existing_pending:
+                    flash("A login approval request is already pending.", "warning")
+                    return redirect(url_for("main.waiting_approval", token=existing_pending.token))
+
+                new_request = LoginRequest(
+                    user_id=user.id,
+                    device_info=request.headers.get("User-Agent"),
+                    ip_address=request.remote_addr,
+                    token=str(uuid.uuid4()),
+                    status="Pending"
+                )
+
+                db.session.add(new_request)
+                db.session.commit()
+
+                flash("Login request sent for approval.", "info")
+                return redirect(url_for("main.waiting_approval", token=new_request.token))
+
+            # ✅ Normal login if not logged in anywhere else
+            session_token = str(uuid.uuid4())
+
+            user.is_logged_in = True
+            user.active_session_token = session_token
+            db.session.commit()
+
             login_user(user)
 
             # ✅ session activity start
             session["last_activity"] = datetime.utcnow().isoformat()
+            session["session_token"] = session_token
 
             if user.role == "admin":
                 return redirect(url_for("main.admin_panel"))
@@ -1539,3 +1573,60 @@ def logout():
     session.clear()
     flash("Logged out successfully.", "success")
     return redirect(url_for("main.home"))
+
+@bp.route("/waiting/<token>")
+def waiting_approval(token):
+    return render_template("waiting_approval.html", token=token)
+
+@bp.route("/approve-login/<int:req_id>", methods=["POST"])
+@login_required
+def approve_login(req_id):
+
+    req = LoginRequest.query.get_or_404(req_id)
+
+    user = User.query.get(req.user_id)
+
+    # generate new session
+    new_token = str(uuid.uuid4())
+
+    user.active_session_token = new_token
+    db.session.commit()
+
+    req.status = "Approved"
+    db.session.commit()
+
+    return {"success": True}
+
+
+@bp.route("/deny-login/<int:req_id>", methods=["POST"])
+@login_required
+def deny_login(req_id):
+
+    req = LoginRequest.query.get_or_404(req_id)
+
+    req.status = "Denied"
+    db.session.commit()
+
+    return {"success": True}
+
+@bp.route("/pending-logins")
+@login_required
+def pending_logins():
+
+    requests = LoginRequest.query.filter_by(
+        user_id=current_user.id,
+        status="Pending"
+    ).all()
+
+    return [{
+        "id": r.id,
+        "device": r.device_info
+    } for r in requests]
+
+@bp.before_app_request
+def check_session():
+    if current_user.is_authenticated:
+        if session.get("session_token") != current_user.active_session_token:
+            logout_user()
+            session.clear()
+            return redirect(url_for("main.login"))

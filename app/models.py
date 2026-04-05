@@ -2,6 +2,7 @@ from flask_login import UserMixin
 from app import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+import uuid   # 🔥 NEW
 
 
 class RecurringTask(db.Model):
@@ -37,7 +38,10 @@ class User(UserMixin, db.Model):
     role = db.Column(db.String(20), default="employee")
     supervisor_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
+    # 🔥 NEW (LOGIN CONTROL)
+    is_logged_in = db.Column(db.Boolean, default=False)
+    active_session_token = db.Column(db.String(255), nullable=True)
 
     # Tasks the user **created**
     tasks_created = db.relationship(
@@ -61,6 +65,7 @@ class User(UserMixin, db.Model):
         backref=db.backref("supervisor", remote_side=[id]),
         lazy=True
     )
+
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
@@ -68,6 +73,24 @@ class User(UserMixin, db.Model):
         return check_password_hash(self.password_hash, password)
 
 
+# 🔥 NEW MODEL (IMPORTANT)
+class LoginRequest(db.Model):
+    __tablename__ = "login_request"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+
+    device_info = db.Column(db.String(255))
+    ip_address = db.Column(db.String(100))
+
+    token = db.Column(db.String(255), unique=True, nullable=False, default=lambda: str(uuid.uuid4()))
+
+    status = db.Column(db.String(20), default="Pending")  # Pending / Approved / Denied
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship("User", backref="login_requests")
 
 
 class Task(db.Model):
@@ -81,7 +104,7 @@ class Task(db.Model):
     reward_points = db.Column(db.Integer, default=0)
     completed_at = db.Column(db.DateTime, nullable=True)
     remarks = db.Column(db.Text)
-    due_date = db.Column(db.DateTime)   # changed
+    due_date = db.Column(db.DateTime)
     is_deleted = db.Column(db.Boolean, default=False)
     attachment = db.Column(db.String(255))
     proof_file = db.Column(db.String(255))
@@ -91,11 +114,9 @@ class Task(db.Model):
     reminder_end_time = db.Column(db.DateTime, nullable=True)
     estimated_time = db.Column(db.Integer, nullable=True)
 
-    # Foreign keys
     created_by = db.Column(db.Integer, db.ForeignKey("user.id"))
     assigned_to = db.Column(db.Integer, db.ForeignKey("user.id"))
 
-    # Relationships
     creator = db.relationship(
         "User",
         foreign_keys=[created_by],
@@ -107,19 +128,14 @@ class Task(db.Model):
         back_populates="tasks_assigned"
     )
 
-    # ✅ WORK TIMER FIELDS
-    work_status = db.Column(db.String(20), default="Stopped")  # Stopped | Started
+    work_status = db.Column(db.String(20), default="Stopped")
     start_time = db.Column(db.DateTime, nullable=True)
     end_time = db.Column(db.DateTime, nullable=True)
-    total_time_spent = db.Column(db.Integer, default=0)  # seconds
+    total_time_spent = db.Column(db.Integer, default=0)
     is_timer_running = db.Column(db.Boolean, default=False)
-
 
     attachments = db.relationship("TaskAttachment", backref="task", lazy=True, cascade="all, delete-orphan")
     subtasks = db.relationship("SubTask", backref="task", lazy=True, cascade="all, delete-orphan")
-
-
-
 
 
 class TaskAttachment(db.Model):
@@ -141,17 +157,19 @@ class SubTask(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey("user.id"))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+
 class Reminder(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     reason = db.Column(db.String(200), nullable=False)
     remind_at = db.Column(db.DateTime, nullable=False)
     end_at = db.Column(db.DateTime, nullable=True)
 
-    is_daily = db.Column(db.Boolean, default=False)  
+    is_daily = db.Column(db.Boolean, default=False)
     active = db.Column(db.Boolean, default=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
     user = db.relationship('User', backref='reminders')
+
 
 class Department(db.Model):
     __tablename__ = "department"
