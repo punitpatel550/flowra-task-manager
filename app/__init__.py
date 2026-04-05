@@ -4,6 +4,7 @@ from flask_login import LoginManager, current_user, logout_user
 from config import Config
 from datetime import datetime, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
+from sqlalchemy import text
 import os
 
 db = SQLAlchemy()
@@ -127,5 +128,31 @@ def create_app():
 
     with app.app_context():
         db.create_all()
+
+        # ✅ Add missing columns safely for approval-based login
+        db.session.execute(text("""
+            ALTER TABLE "user"
+            ADD COLUMN IF NOT EXISTS is_logged_in BOOLEAN DEFAULT FALSE
+        """))
+
+        db.session.execute(text("""
+            ALTER TABLE "user"
+            ADD COLUMN IF NOT EXISTS active_session_token VARCHAR(255)
+        """))
+
+        # ✅ Create login_request table safely
+        db.session.execute(text("""
+            CREATE TABLE IF NOT EXISTS login_request (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES "user"(id),
+                device_info VARCHAR(255),
+                ip_address VARCHAR(100),
+                token VARCHAR(255) UNIQUE NOT NULL,
+                status VARCHAR(20) DEFAULT 'Pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+
+        db.session.commit()
 
     return app
