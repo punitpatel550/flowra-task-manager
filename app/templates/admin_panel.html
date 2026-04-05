@@ -552,36 +552,71 @@ required>
     </div>
 </div>
 
-<div id="login-requests"></div>
+<div class="modal fade" id="loginApprovalModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">New Login Request</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <p id="loginRequestText"></p>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-success" id="approveBtn">Approve</button>
+                <button class="btn btn-danger" id="denyBtn">Deny</button>
+            </div>
+
+        </div>
+    </div>
+</div>
 
 <script>
-setInterval(function () {
-    fetch("/pending-logins")
-    .then(res => res.json())
-    .then(data => {
-        let html = "";
+let currentRequestId = null;
+let modalInstance = null;
 
-        data.forEach(req => {
-            html += `
-                <div>
-                    New login request from ${req.device}
-                    <button onclick="approve(${req.id})">Approve</button>
-                    <button onclick="deny(${req.id})">Deny</button>
-                </div>
-            `;
+document.addEventListener("DOMContentLoaded", function(){
+
+    const modalEl = document.getElementById("loginApprovalModal");
+    modalInstance = new bootstrap.Modal(modalEl);
+
+    setInterval(function () {
+        fetch("/pending-logins")
+        .then(res => res.json())
+        .then(data => {
+
+            if (data.length > 0) {
+
+                const req = data[0];
+
+                currentRequestId = req.id;
+
+                document.getElementById("loginRequestText").innerText =
+                    "New login request from " + req.device;
+
+                modalInstance.show();
+            }
         });
+    }, 3000);
 
-        document.getElementById("login-requests").innerHTML = html;
-    });
-}, 3000);
+    document.getElementById("approveBtn").onclick = function(){
+        if(currentRequestId){
+            fetch("/approve-login/" + currentRequestId, {method:"POST"})
+            .then(()=> modalInstance.hide());
+        }
+    };
 
-function approve(id){
-    fetch("/approve-login/"+id, {method:"POST"});
-}
+    document.getElementById("denyBtn").onclick = function(){
+        if(currentRequestId){
+            fetch("/deny-login/" + currentRequestId, {method:"POST"})
+            .then(()=> modalInstance.hide());
+        }
+    };
 
-function deny(id){
-    fetch("/deny-login/"+id, {method:"POST"});
-}
+});
 </script>
 
 
