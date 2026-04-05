@@ -87,38 +87,31 @@ def login():
                     db.session.commit()
                     existing_pending = None
 
-                # if there is a valid pending request, keep waiting
-                if user.is_logged_in and existing_pending:
+                # if valid pending request already exists, keep waiting on second device
+                if existing_pending:
                     return jsonify({
                         "status": "waiting",
                         "token": existing_pending.token,
                         "message": "This account is already active on another device. Waiting for allow or deny."
                     })
 
-                # if user is marked logged in but no pending request exists, treat it as stale and clear it
-                if user.is_logged_in and not existing_pending:
-                    user.is_logged_in = False
-                    user.active_session_token = None
-                    db.session.commit()
+                # create fresh login request
+                new_request = LoginRequest(
+                    user_id=user.id,
+                    device_info=request.headers.get("User-Agent"),
+                    ip_address=request.remote_addr,
+                    token=str(uuid.uuid4()),
+                    status="Pending"
+                )
 
-                # create fresh request only if still needed
-                if user.is_logged_in:
-                    new_request = LoginRequest(
-                        user_id=user.id,
-                        device_info=request.headers.get("User-Agent"),
-                        ip_address=request.remote_addr,
-                        token=str(uuid.uuid4()),
-                        status="Pending"
-                    )
+                db.session.add(new_request)
+                db.session.commit()
 
-                    db.session.add(new_request)
-                    db.session.commit()
-
-                    return jsonify({
-                        "status": "waiting",
-                        "token": new_request.token,
-                        "message": "Login request sent. Waiting for allow or deny."
-                    })
+                return jsonify({
+                    "status": "waiting",
+                    "token": new_request.token,
+                    "message": "Login request sent. Waiting for allow or deny."
+                })
 
             # Normal login
             session_token = str(uuid.uuid4())
