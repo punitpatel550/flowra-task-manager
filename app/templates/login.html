@@ -107,17 +107,11 @@ position:relative;
 }
 
 .login-input input{
-
 width:100%;
-
 padding:12px 12px 12px 42px;
-
 border-radius:12px;
-
 border:1px solid #d1d5db;
-
 outline:none;
-
 transition:0.25s;
 }
 
@@ -127,41 +121,25 @@ box-shadow:0 0 0 3px rgba(37,99,235,0.15);
 }
 
 .login-input i{
-
 position:absolute;
-
 left:12px;
-
 top:50%;
-
 transform:translateY(-50%);
-
 color:#2563eb;
-
 }
 
 /* LOGIN BUTTON */
 
 .login-btn{
-
 width:100%;
-
 padding:12px;
-
 border:none;
-
 border-radius:12px;
-
 background:linear-gradient(135deg,#2563eb,#7c3aed);
-
 color:white;
-
 font-weight:600;
-
 box-shadow:0 10px 30px rgba(37,99,235,0.35);
-
 transition:.3s;
-
 }
 
 .login-btn:hover{
@@ -171,19 +149,12 @@ transform:translateY(-2px);
 /* SHOW PASSWORD */
 
 .show-pass{
-
 position:absolute;
-
 right:12px;
-
 top:50%;
-
 transform:translateY(-50%);
-
 cursor:pointer;
-
 color:#6b7280;
-
 }
 
 /* SMALL TEXT */
@@ -193,6 +164,26 @@ margin-top:15px;
 text-align:center;
 font-size:13px;
 color:#6b7280;
+}
+
+/* LOADER */
+
+.loader-box{
+display:none;
+text-align:center;
+padding-top:10px;
+}
+
+.loader-box h5{
+margin-bottom:16px;
+font-weight:600;
+color:#2563eb;
+}
+
+.loader-box p{
+font-size:14px;
+color:#6b7280;
+margin-top:12px;
 }
 
 </style>
@@ -212,19 +203,9 @@ color:#6b7280;
 
 <h3>Login to Flowra</h3>
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-{% if messages %}
-    {% set ns = namespace(shown=[]) %}
-    {% for category, message in messages %}
-        {% if message not in ns.shown and message != "Unauthorized access" and message != "Session expired. Please login again." %}
-            {% set ns.shown = ns.shown + [message] %}
-            <div class="alert alert-{{ category }} mb-3">{{ message }}</div>
-        {% endif %}
-    {% endfor %}
-{% endif %}
-{% endwith %}
+<div id="messageBox"></div>
 
-<form method="POST">
+<form method="POST" id="loginForm">
 
 <div class="login-input">
 <i class="fa fa-user"></i>
@@ -234,15 +215,20 @@ color:#6b7280;
 <div class="login-input">
 <i class="fa fa-lock"></i>
 <input type="password" name="password" id="password" placeholder="Password" required>
-
 <i class="fa fa-eye show-pass" onclick="togglePassword()"></i>
 </div>
 
-<button class="login-btn">
+<button class="login-btn" type="submit">
 <i class="fa fa-sign-in-alt"></i> Login
 </button>
 
 </form>
+
+<div id="loaderBox" class="loader-box">
+    <h5>Waiting for approval...</h5>
+    <div class="spinner-border text-primary" role="status"></div>
+    <p>Please wait while the authorized user allows or denies this login.</p>
+</div>
 
 <div class="login-footer">
 Secure login for Flowra Task Manager
@@ -260,42 +246,92 @@ Secure login for Flowra Task Manager
 /* PARTICLES */
 
 particlesJS("particles-js",{
-
 particles:{
-
 number:{value:60},
-
 size:{value:3},
-
 color:{value:"#2563eb"},
-
 line_linked:{
 enable:true,
 color:"#2563eb",
 opacity:0.2
 },
-
 move:{
 speed:1.5
 }
-
 }
-
 })
 
 /* SHOW PASSWORD */
 
 function togglePassword(){
-
-let pass = document.getElementById("password")
-
-if(pass.type === "password"){
-pass.type = "text"
-}else{
-pass.type = "password"
+    let pass = document.getElementById("password")
+    if(pass.type === "password"){
+        pass.type = "text"
+    }else{
+        pass.type = "password"
+    }
 }
 
+function showMessage(type, text){
+    document.getElementById("messageBox").innerHTML =
+        `<div class="alert alert-${type} mb-3">${text}</div>`;
 }
+
+function checkLoginStatus(token){
+    const interval = setInterval(function(){
+        fetch("/check-login-status/" + token)
+        .then(res => res.json())
+        .then(data => {
+
+            if(data.status === "Approved"){
+                clearInterval(interval);
+                window.location.href = "/complete-login/" + token;
+            }
+
+            if(data.status === "Denied"){
+                clearInterval(interval);
+                document.getElementById("loaderBox").style.display = "none";
+                document.getElementById("loginForm").style.display = "block";
+                showMessage("danger", "Access denied");
+            }
+
+        });
+    }, 2000);
+}
+
+document.getElementById("loginForm").addEventListener("submit", function(e){
+    e.preventDefault();
+
+    const form = this;
+    const formData = new FormData(form);
+
+    fetch("/login", {
+        method: "POST",
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+
+        if(data.status === "success"){
+            window.location.href = data.redirect;
+        }
+
+        else if(data.status === "waiting"){
+            document.getElementById("messageBox").innerHTML = "";
+            document.getElementById("loginForm").style.display = "none";
+            document.getElementById("loaderBox").style.display = "block";
+            checkLoginStatus(data.token);
+        }
+
+        else{
+            showMessage("danger", data.message || "Login failed");
+        }
+
+    })
+    .catch(() => {
+        showMessage("danger", "Something went wrong. Please try again.");
+    });
+});
 
 </script>
 

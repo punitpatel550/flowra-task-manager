@@ -30,6 +30,14 @@ def to_ist(dt):
 @bp.before_app_request
 def keep_session_alive():
     if current_user.is_authenticated:
+        saved_token = session.get("session_token")
+
+        if current_user.active_session_token and saved_token != current_user.active_session_token:
+            logout_user()
+            session.clear()
+            flash("Your session was ended because this account was approved on another device.", "warning")
+            return redirect(url_for("main.login"))
+
         session["last_activity"] = datetime.utcnow().isoformat()
 
 @bp.route("/")
@@ -80,11 +88,11 @@ def login():
                         user.active_session_token = None
                         db.session.commit()
                     else:
-                        flash(
-                            "This account is already active on another device. Please approve or deny the request from the authorized device.",
-                            "warning"
-                        )
-                        return redirect(url_for("main.login"))
+                        return jsonify({
+                            "status": "waiting",
+                            "token": existing_pending.token,
+                            "message": "This account is already active on another device. Waiting for allow or deny."
+                        })
 
                 # Re-check after stale cleanup
                 if user.is_logged_in:
@@ -99,11 +107,11 @@ def login():
                     db.session.add(new_request)
                     db.session.commit()
 
-                    flash(
-                        "This account is already active on another device. Approval or denial will be handled by the authorized user.",
-                        "warning"
-                    )
-                    return redirect(url_for("main.login"))
+                    return jsonify({
+                        "status": "waiting",
+                        "token": new_request.token,
+                        "message": "Login request sent. Waiting for allow or deny."
+                    })
 
             # Normal login
             session_token = str(uuid.uuid4())
@@ -118,18 +126,97 @@ def login():
             session["session_token"] = session_token
 
             if user.role == "admin":
-                return redirect(url_for("main.admin_panel"))
+                return jsonify({
+                    "status": "success",
+                    "redirect": url_for("main.admin_panel")
+                })
 
             elif user.role == "manager":
-                return redirect(url_for("main.manager_panel"))
+                return jsonify({
+                    "status": "success",
+                    "redirect": url_for("main.manager_panel")
+                })
 
             else:
-                return redirect(url_for("main.employee_panel"))
+                return jsonify({
+                    "status": "success",
+                    "redirect": url_for("main.employee_panel")
+                })
 
         else:
-            flash("Invalid username or password", "danger")
+            return jsonify({
+                "status": "error",
+                "message": "Invalid username or password"
+            })
 
     return render_template("login.html")
+
+
+@bp.route("/check-login-status/<token>")
+def check_login_status(token):
+    req = LoginRequest.query.filter_by(token=token).first()
+
+    if not req:
+        return jsonify({
+            "status": "Denied",
+            "message": "Request not found"
+        })
+
+    return jsonify({
+        "status": req.status
+    })
+
+
+@bp.route("/complete-login/<token>")
+def complete_login(token):
+    req = LoginRequest.query.filter_by(token=token, status="Approved").first()
+
+    if not req:
+        flash("Access denied or request expired.", "danger")
+        return redirect(url_for("main.login"))
+
+    user = User.query.get(req.user_id)
+
+    if not user:
+        flash("User not found.", "danger")
+        return redirect(url_for("main.login"))
+
+    session_token = str(uuid.uuid4())
+
+    user.is_logged_in = True
+    user.active_session_token = session_token
+    req.status = "Completed"
+    db.session.commit()
+
+    login_user(user)
+
+    session["last_activity"] = datetime.utcnow().isoformat()
+    session["session_token"] = session_token
+
+    if user.role == "admin":
+        return redirect(url_for("main.admin_panel"))
+    elif user.role == "manager":
+        return redirect(url_for("main.manager_panel"))
+    else:
+        return redirect(url_for("main.employee_panel"))
+
+
+@bp.route("/approve-login/<int:req_id>", methods=["POST"])
+@login_required
+def approve_login(req_id):
+    req = LoginRequest.query.get_or_404(req_id)
+    req.status = "Approved"
+    db.session.commit()
+    return jsonify({"success": True})
+
+
+@bp.route("/deny-login/<int:req_id>", methods=["POST"])
+@login_required
+def deny_login(req_id):
+    req = LoginRequest.query.get_or_404(req_id)
+    req.status = "Denied"
+    db.session.commit()
+    return jsonify({"success": True})
 
 
 
@@ -1581,56 +1668,7 @@ def stop_task(id):
     return redirect(url_for("main.employee_panel"))
 
 
-@bp.route("/approve-login/<int:req_id>", methods=["POST"])
-@login_required
-def approve_login(req_id):
 
-    req = LoginRequest.query.get_or_404(req_id)
-    user = User.query.get(req.user_id)
-
-    # 🔥 Reset login so second device can login
-    user.is_logged_in = False
-    user.active_session_token = None
-
-    req.status = "Approved"
-
-    db.session.commit()
-
-    return {"success": True}
-
-
-@bp.route("/deny-login/<int:req_id>", methods=["POST"])
-@login_required
-def deny_login(req_id):
-
-    req = LoginRequest.query.get_or_404(req_id)
-    req.status = "Denied"
-
-    db.session.commit()
-
-    return {"success": True}
-
-@bp.route("/pending-logins")
-@login_required
-def pending_logins():
-
-    requests = LoginRequest.query.filter_by(
-        user_id=current_user.id,
-        status="Pending"
-    ).all()
-
-    return [{
-        "id": r.id,
-        "device": r.device_info
-    } for r in requests]
-
-@bp.before_app_request
-def check_session():
-    if current_user.is_authenticated:
-        if session.get("session_token") != current_user.active_session_token:
-            logout_user()
-            session.clear()
-            return redirect(url_for("main.login"))
 
 # ---------------- LOGOUT ----------------
 @bp.route("/logout")
