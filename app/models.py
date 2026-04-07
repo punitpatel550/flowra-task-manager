@@ -2,7 +2,7 @@ from flask_login import UserMixin
 from app import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
-import uuid   # 🔥 NEW
+import uuid
 
 
 class RecurringTask(db.Model):
@@ -11,14 +11,14 @@ class RecurringTask(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
-    
+
     assigned_to = db.Column(db.Integer, db.ForeignKey("user.id"))
     employee = db.relationship("User")
 
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=False)
 
-    frequency = db.Column(db.String(20))  # future use
+    frequency = db.Column(db.String(20))
     last_generated = db.Column(db.Date)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -39,13 +39,12 @@ class User(UserMixin, db.Model):
     supervisor_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # 🔥 NEW (LOGIN CONTROL)
-    is_logged_in = db.Column(db.Boolean, default=False)
+    # Login control
+    is_logged_in = db.Column(db.Boolean, default=False, nullable=False)
     active_session_token = db.Column(db.String(255), nullable=True)
+    last_seen = db.Column(db.DateTime, nullable=True)
 
-    last_seen = db.column(db.DateTime)
-
-    # Tasks the user **created**
+    # Tasks the user created
     tasks_created = db.relationship(
         "Task",
         foreign_keys="Task.created_by",
@@ -75,21 +74,20 @@ class User(UserMixin, db.Model):
         return check_password_hash(self.password_hash, password)
 
 
-# 🔥 NEW MODEL (IMPORTANT)
 class LoginRequest(db.Model):
     __tablename__ = "login_request"
 
     id = db.Column(db.Integer, primary_key=True)
-
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-
     device_info = db.Column(db.String(255))
     ip_address = db.Column(db.String(100))
-
-    token = db.Column(db.String(255), unique=True, nullable=False, default=lambda: str(uuid.uuid4()))
-
-    status = db.Column(db.String(20), default="Pending")  # Pending / Approved / Denied
-
+    token = db.Column(
+        db.String(255),
+        unique=True,
+        nullable=False,
+        default=lambda: str(uuid.uuid4())
+    )
+    status = db.Column(db.String(20), default="Pending")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship("User", backref="login_requests")
@@ -130,14 +128,24 @@ class Task(db.Model):
         back_populates="tasks_assigned"
     )
 
-    work_status = db.Column(db.String(20), default="not_started")  # not_started / in_progress / paused / completed
+    work_status = db.Column(db.String(20), default="not_started")
     start_time = db.Column(db.DateTime, nullable=True)
     end_time = db.Column(db.DateTime, nullable=True)
     total_time_spent = db.Column(db.Integer, default=0)
     is_timer_running = db.Column(db.Boolean, default=False)
 
-    attachments = db.relationship("TaskAttachment", backref="task", lazy=True, cascade="all, delete-orphan")
-    subtasks = db.relationship("SubTask", backref="task", lazy=True, cascade="all, delete-orphan")
+    attachments = db.relationship(
+        "TaskAttachment",
+        backref="task",
+        lazy=True,
+        cascade="all, delete-orphan"
+    )
+    subtasks = db.relationship(
+        "SubTask",
+        backref="task",
+        lazy=True,
+        cascade="all, delete-orphan"
+    )
 
 
 class TaskAttachment(db.Model):
@@ -168,9 +176,9 @@ class Reminder(db.Model):
 
     is_daily = db.Column(db.Boolean, default=False)
     active = db.Column(db.Boolean, default=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
 
-    user = db.relationship('User', backref='reminders')
+    user = db.relationship("User", backref="reminders")
 
 
 class Department(db.Model):

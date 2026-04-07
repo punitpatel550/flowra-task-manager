@@ -72,46 +72,47 @@ def login():
 
         if user and user.check_password(password):
 
-            # 🔥 current device info
-            current_device = request.headers.get("User-Agent")
+            current_device = request.headers.get("User-Agent", "Unknown Device")
 
-            # 🔥 auto clear inactive session
-            if user.is_logged_in and user.last_seen:
+            # Auto clear inactive/stale session
+            if user.is_logged_in is True and user.last_seen is not None:
                 if datetime.utcnow() - user.last_seen > timedelta(seconds=20):
                     user.is_logged_in = False
                     user.active_session_token = None
                     db.session.commit()
 
-            # 🔥 SAME DEVICE LOGIN (NO POPUP)
-            if user.is_logged_in:
+            # SAME DEVICE LOGIN → no popup
+            if user.is_logged_in is True:
                 if session.get("session_token") == user.active_session_token:
-                    # same device → allow login directly
                     pass
                 else:
-                    # 🔥 DIFFERENT DEVICE → approval flow
-
+                    # DIFFERENT DEVICE → approval flow
                     existing_pending = LoginRequest.query.filter_by(
                         user_id=user.id,
                         status="Pending"
                     ).first()
 
-                    # stale request cleanup
-                    if existing_pending and datetime.utcnow() - existing_pending.created_at > timedelta(minutes=2):
+                    # stale pending request cleanup
+                    if (
+                        existing_pending is not None
+                        and existing_pending.created_at is not None
+                        and datetime.utcnow() - existing_pending.created_at > timedelta(minutes=2)
+                    ):
                         existing_pending.status = "Denied"
                         user.is_logged_in = False
                         user.active_session_token = None
                         db.session.commit()
                         existing_pending = None
 
-                    # if still pending → wait
-                    if existing_pending:
+                    # if still pending → keep waiting
+                    if existing_pending is not None:
                         return jsonify({
                             "status": "waiting",
                             "token": existing_pending.token,
                             "message": "Waiting for approval..."
                         })
 
-                    # create new request
+                    # create new login request
                     new_request = LoginRequest(
                         user_id=user.id,
                         device_info=current_device,
@@ -129,8 +130,7 @@ def login():
                         "message": "Login request sent"
                     })
 
-            # 🔥 NORMAL LOGIN
-
+            # NORMAL LOGIN
             session_token = str(uuid.uuid4())
 
             user.is_logged_in = True
