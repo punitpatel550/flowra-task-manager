@@ -17,6 +17,8 @@
 
 <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='flowra_favicon.ico') }}">
 
+<!-- ONLY CHANGED PARTS — KEEP REST SAME -->
+
 <style>
 *{
 font-family:'Poppins',sans-serif;
@@ -32,6 +34,9 @@ min-height:100vh;
 color:#1f2937;
 display:flex;
 flex-direction:column;
+
+/* ✅ ADD THIS (FIX OVERLAP) */
+padding-top:110px;
 }
 
 /* NAVBAR */
@@ -42,6 +47,12 @@ backdrop-filter:blur(10px);
 box-shadow:0 10px 25px rgba(0,0,0,0.08);
 padding:14px 0;
 min-height:95px;
+
+/* ✅ MAKE FIXED */
+position:fixed;
+top:0;
+width:100%;
+z-index:1000;
 }
 
 .navbar-brand{
@@ -58,9 +69,7 @@ line-height:1;
 .navbar-brand img{
 height:95px;
 width:auto;
-max-width:none;
 object-fit:contain;
-transition:0.3s;
 display:block;
 }
 
@@ -69,134 +78,29 @@ color:#2563eb;
 font-weight:800;
 letter-spacing:0.5px;
 font-size:28px;
-line-height:1;
 }
 
-.navbar .btn{
-margin-left:10px;
-border-radius:10px;
-padding:7px 14px;
-font-weight:500;
+/* ✅ RESPONSIVE FIX */
+.navbar .container{
+display:flex;
+justify-content:space-between;
+align-items:center;
+flex-wrap:wrap;
 }
 
-/* BUTTONS */
-
-.btn-outline-light{
-border-color:#2563eb;
-color:#2563eb;
-background:transparent;
-}
-
-.btn-outline-light:hover{
-background:#2563eb;
-color:white;
-}
-
-.btn-danger{
-background:#ff4d6d;
-border:none;
-}
-
-.btn-danger:hover{
-background:#e63d5e;
-}
-
-.btn-primary{
-background:linear-gradient(135deg,#2563eb,#7c3aed);
-border:none;
-}
-
-.btn-primary:hover{
-opacity:0.95;
-}
-
-/* CARDS */
-
-.card{
-background:rgba(255,255,255,0.82);
-backdrop-filter:blur(10px);
-border:none;
-border-radius:18px;
-box-shadow:0 10px 35px rgba(0,0,0,0.08);
-}
-
-/* TABLE */
-
-.table{
-background:white;
-border-radius:12px;
-overflow:hidden;
-}
-
-.table thead{
-background:linear-gradient(135deg,#2563eb,#7c3aed);
-color:white;
-}
-
-/* FORMS */
-
-.form-control,
-.form-select{
-border-radius:12px;
-border:1px solid #d1d5db;
-}
-
-.form-control:focus,
-.form-select:focus{
-border-color:#2563eb;
-box-shadow:none;
-}
-
-/* HEADINGS */
-
-h1,h2,h3,h4,h5{
-color:#2563eb;
-font-weight:600;
-}
-
-/* BADGES */
-
-.badge.bg-success{
-background:#22c55e !important;
-}
-
-.badge.bg-danger{
-background:#ff4d6d !important;
-}
-
-.badge.bg-warning{
-background:#facc15 !important;
-color:black !important;
-}
-
-/* MODAL */
-
-.modal-content{
-border-radius:18px;
-}
-
-/* MAIN */
-
-.main-wrapper{
-flex:1;
-}
-
-/* FOOTER */
-
-footer{
-background:#111827;
-color:#cbd5e1;
-padding:20px;
-margin-top:40px;
-}
-
-.app-footer p{
-margin:0;
-}
-
+/* ✅ MOBILE FIX */
 @media (max-width: 768px){
+
+body{
+padding-top:90px;
+}
+
+.navbar{
+min-height:80px;
+}
+
 .navbar-brand img{
-height:58px;
+height:55px;
 }
 
 .navbar-brand span{
@@ -204,10 +108,13 @@ font-size:18px;
 }
 
 .navbar .btn{
-margin-left:6px;
-margin-top:6px;
+margin-top:8px;
+width:100%;
 }
+
 }
+
+/* CARDS / UI SAME */
 </style>
 
 </head>
