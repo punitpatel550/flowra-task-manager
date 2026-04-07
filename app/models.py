@@ -43,6 +43,8 @@ class User(UserMixin, db.Model):
     is_logged_in = db.Column(db.Boolean, default=False)
     active_session_token = db.Column(db.String(255), nullable=True)
 
+    last_seen = db.column(db.DateTime)
+
     # Tasks the user **created**
     tasks_created = db.relationship(
         "Task",

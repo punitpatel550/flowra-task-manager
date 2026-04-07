@@ -294,7 +294,11 @@ margin-top:6px;
 </div>
 
 <!-- REMINDER SCRIPT -->
-
+<script>
+setInterval(function(){
+    fetch("/heartbeat");
+}, 10000);
+</script>
 <script>
 let alarm = new Audio("/static/sounds/alarm.mp3")
 alarm.loop = true

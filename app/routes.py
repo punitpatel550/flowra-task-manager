@@ -72,6 +72,13 @@ def login():
 
         if user and user.check_password(password):
 
+            # ✅ Auto clear inactive/dead session using last_seen
+            if user.is_logged_in and user.last_seen:
+                if datetime.utcnow() - user.last_seen > timedelta(seconds=20):
+                    user.is_logged_in = False
+                    user.active_session_token = None
+                    db.session.commit()
+
             # If already logged in on another device
             if user.is_logged_in:
                 existing_pending = LoginRequest.query.filter_by(
@@ -118,6 +125,7 @@ def login():
 
             user.is_logged_in = True
             user.active_session_token = session_token
+            user.last_seen = datetime.utcnow()
             db.session.commit()
 
             login_user(user)
@@ -1032,6 +1040,12 @@ def approve_task(id):
     else:
         return redirect(url_for("main.manager_panel"))
 
+@bp.route("/heartbeat")
+@login_required
+def heartbeat():
+    current_user.last_seen = datetime.utcnow()
+    db.session.commit()
+    return "", 204
 
 # ---------------- CREATE USER ----------------
 @bp.route("/create-user", methods=["GET", "POST"])
