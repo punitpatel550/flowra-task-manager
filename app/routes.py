@@ -840,10 +840,13 @@ def set_reminder():
     is_daily = True if request.form.get('is_daily') else False
 
     try:
+        remind_at_dt = datetime.fromisoformat(remind_at) if remind_at else None
+        end_at_dt = datetime.fromisoformat(end_at) if end_at else None
+
         reminder = Reminder(
             reason=reason,
-            remind_at=datetime.fromisoformat(remind_at),
-            end_at=datetime.fromisoformat(end_at) if end_at else None,
+            remind_at=remind_at_dt,
+            end_at=end_at_dt,
             user_id=current_user.id,
             is_daily=is_daily,
             active=True
@@ -875,10 +878,15 @@ def create_reminder():
     end_at = request.form.get("end_at")
     is_daily = True if request.form.get("is_daily") else False
 
+    ist_now = datetime.now(ZoneInfo("Asia/Kolkata")).replace(tzinfo=None)
+
+    remind_at_dt = datetime.fromisoformat(remind_at) if remind_at else None
+    end_at_dt = datetime.fromisoformat(end_at) if end_at else None
+
     reminder = Reminder(
         reason=reason,
-        remind_at=datetime.fromisoformat(remind_at),
-        end_at=datetime.fromisoformat(end_at) if end_at else None,
+        remind_at=remind_at_dt,
+        end_at=end_at_dt,
         user_id=current_user.id,
         is_daily=is_daily,
         active=True
@@ -944,7 +952,7 @@ def get_latest_announcement():
 @login_required
 def get_reminders():
 
-    now = datetime.now()
+    now = datetime.now(ZoneInfo("Asia/Kolkata")).replace(tzinfo=None)
 
     reminders = Reminder.query.filter(
         Reminder.user_id == current_user.id,
@@ -956,19 +964,17 @@ def get_reminders():
 
     for r in reminders:
 
-        # If daily, shift next remind time by 1 day
         if r.is_daily:
             r.remind_at = r.remind_at + timedelta(days=1)
-            db.session.commit()
         else:
             r.active = False
-            db.session.commit()
 
         data.append({
             "id": r.id,
             "reason": r.reason
         })
 
+    db.session.commit()
     return jsonify(data)
 
 
