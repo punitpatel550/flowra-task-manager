@@ -640,9 +640,9 @@ def edit_user(id):
         departments=departments
     )
 
-@bp.route("/create-recurring-task", methods=["GET", "POST"])
+@bp.route("/recurring-task-history")
 @login_required
-def create_recurring_task():
+def recurring_task_history():
 
     if current_user.role not in ["admin", "manager"]:
         flash("Unauthorized", "danger")
@@ -653,32 +653,24 @@ def create_recurring_task():
             role="employee",
             supervisor_id=current_user.id
         ).all()
+
+        employee_ids = [emp.id for emp in employees]
+
+        recurring_tasks = RecurringTask.query.filter(
+            RecurringTask.assigned_to.in_(employee_ids)
+        ).order_by(
+            RecurringTask.created_at.desc()
+        ).all() if employee_ids else []
+
     else:
-        employees = User.query.filter_by(role="employee").all()
+        recurring_tasks = RecurringTask.query.order_by(
+            RecurringTask.created_at.desc()
+        ).all()
 
-    if request.method == "POST":
-        title = request.form.get("title")
-        assigned_to = request.form.get("assigned_to")
-        start_date = datetime.strptime(request.form.get("start_date"), "%Y-%m-%d").date()
-        end_date = datetime.strptime(request.form.get("end_date"), "%Y-%m-%d").date()
-        frequency = request.form.get("frequency")
-
-        recurring = RecurringTask(
-            title=title,
-            assigned_to=int(assigned_to),
-            start_date=start_date,
-            end_date=end_date,
-            frequency=frequency,
-            last_generated=None
-        )
-
-        db.session.add(recurring)
-        db.session.commit()
-
-        flash("Recurring task created!", "success")
-        return redirect(url_for("main.dashboard"))
-
-    return render_template("create_recurring_task.html", employees=employees)
+    return render_template(
+        "recurring_task_history.html",
+        recurring_tasks=recurring_tasks
+    )
 
 
 
