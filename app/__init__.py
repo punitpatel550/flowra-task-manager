@@ -139,6 +139,10 @@ def create_app():
             ALTER TABLE "user"
             ADD COLUMN IF NOT EXISTS active_session_token VARCHAR(255)
         """))
+        db.session.execute(text("""
+    ALTER TABLE "user"
+    ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP
+"""))
 
         # ✅ Create login_request table safely
         db.session.execute(text("""
