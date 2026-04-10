@@ -799,6 +799,145 @@ def delete_reminder(id):
 
     return "",204
 
+
+
+
+@bp.route("/create-recurring-task", methods=["GET", "POST"])
+@login_required
+def create_recurring_task():
+    if current_user.role not in ["admin", "manager"]:
+        flash("Unauthorized", "danger")
+        return redirect(url_for("main.dashboard"))
+
+    # Employees list according to role
+    if current_user.role == "manager":
+        employees = User.query.filter_by(
+            role="employee",
+            supervisor_id=current_user.id
+        ).order_by(User.username.asc()).all()
+    else:
+        employees = User.query.filter_by(
+            role="employee"
+        ).order_by(User.username.asc()).all()
+
+    # Recurring task history according to role
+    if current_user.role == "manager":
+        employee_ids = [emp.id for emp in employees]
+
+        if employee_ids:
+            recurring_tasks = RecurringTask.query.filter(
+                RecurringTask.assigned_to.in_(employee_ids)
+            ).order_by(RecurringTask.created_at.desc()).all()
+        else:
+            recurring_tasks = []
+    else:
+        recurring_tasks = RecurringTask.query.order_by(
+            RecurringTask.created_at.desc()
+        ).all()
+
+    if request.method == "POST":
+        title = (request.form.get("title") or "").strip()
+        assigned_to_raw = request.form.get("assigned_to")
+        start_date_raw = request.form.get("start_date")
+        end_date_raw = request.form.get("end_date")
+        frequency = (request.form.get("frequency") or "").strip().lower()
+
+        if not title:
+            flash("Task title is required.", "danger")
+            return render_template(
+                "create_recurring_task.html",
+                employees=employees,
+                recurring_tasks=recurring_tasks
+            )
+
+        if not assigned_to_raw:
+            flash("Please select an employee.", "danger")
+            return render_template(
+                "create_recurring_task.html",
+                employees=employees,
+                recurring_tasks=recurring_tasks
+            )
+
+        if frequency not in ["daily", "weekly", "monthly"]:
+            flash("Invalid frequency selected.", "danger")
+            return render_template(
+                "create_recurring_task.html",
+                employees=employees,
+                recurring_tasks=recurring_tasks
+            )
+
+        try:
+            assigned_to = int(assigned_to_raw)
+        except ValueError:
+            flash("Invalid employee selected.", "danger")
+            return render_template(
+                "create_recurring_task.html",
+                employees=employees,
+                recurring_tasks=recurring_tasks
+            )
+
+        try:
+            start_date = datetime.strptime(start_date_raw, "%Y-%m-%d").date()
+            end_date = datetime.strptime(end_date_raw, "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            flash("Invalid start date or end date.", "danger")
+            return render_template(
+                "create_recurring_task.html",
+                employees=employees,
+                recurring_tasks=recurring_tasks
+            )
+
+        if end_date < start_date:
+            flash("Repeat Until date must be after or equal to Start Date.", "danger")
+            return render_template(
+                "create_recurring_task.html",
+                employees=employees,
+                recurring_tasks=recurring_tasks
+            )
+
+        employee = User.query.filter_by(
+            id=assigned_to,
+            role="employee"
+        ).first()
+
+        if not employee:
+            flash("Selected employee not found.", "danger")
+            return render_template(
+                "create_recurring_task.html",
+                employees=employees,
+                recurring_tasks=recurring_tasks
+            )
+
+        # Manager can create only for own employees
+        if current_user.role == "manager" and employee.supervisor_id != current_user.id:
+            flash("You can assign recurring tasks only to your own employees.", "danger")
+            return render_template(
+                "create_recurring_task.html",
+                employees=employees,
+                recurring_tasks=recurring_tasks
+            )
+
+        new_recurring_task = RecurringTask(
+            title=title,
+            assigned_to=assigned_to,
+            start_date=start_date,
+            end_date=end_date,
+            frequency=frequency,
+            last_generated=None
+        )
+
+        db.session.add(new_recurring_task)
+        db.session.commit()
+
+        flash("Recurring task created successfully!", "success")
+        return redirect(url_for("main.create_recurring_task"))
+
+    return render_template(
+        "create_recurring_task.html",
+        employees=employees,
+        recurring_tasks=recurring_tasks
+    )
+
 # ---------------- DELETE TASK ----------------
 # DELETE TASK
 @bp.route("/task/delete/<int:task_id>", methods=["POST"])
